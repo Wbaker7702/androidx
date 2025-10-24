@@ -147,9 +147,8 @@ jobs:
           dependencies-cache-key: |
             **/libs.versions.toml
           dependencies-cache-exact: false
-          gradle-executable: activity/gradlew
-          wrapper-directory: activity/gradle/wrapper
-          distributions-cache-enabled: true
+          gradle-executable: gradle
+          distributions-cache-enabled: false
       - name: "ktfmt"
         if: ${{ steps.ktfmt-file-args.outputs.ktfmt-file-args != '' }}
         uses: gradle/gradle-command-action@b3afdc78a7849557ab26e243ccf07548086da025 # v1.5.1
