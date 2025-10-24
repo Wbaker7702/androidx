@@ -86,7 +86,7 @@ jobs:
 
       - name: "Setup JDK 11"
         id: setup-java
-        uses: actions/setup-java@b6e674f4b717d7b0ae3baee0fbe79f498905dfde # v1.4.4
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
         with:
           java-version: "11"
 
@@ -121,8 +121,12 @@ jobs:
         id: ktfmt-file-args
         run: |
           set -x
-          KTFMT_FILES=`echo "${{ steps.changed-files.outputs.files }}" | sed 's|[^ ]* *|--file=../&|g' | grep -v "*.txt"`
-          echo "ktfmt-file-args=KTFMT_FILES" >> $GITHUB_OUTPUT
+          KTFMT_FILES=$(echo "${{ steps.changed-files.outputs.files }}" \
+            | tr ' ' '\n' \
+            | grep -E '\\.(kt|kts)$' \
+            | sed 's|^|--file=../|g' \
+            | tr '\n' ' ')
+          echo "ktfmt-file-args=$KTFMT_FILES" >> $GITHUB_OUTPUT
 
       - name: "Parse changed-files as affected files args"
         id: affected-file-args
@@ -132,7 +136,7 @@ jobs:
           echo "files=AFFECTED_FILES" >> $GITHUB_OUTPUT
       - name: "warm up gradle"
         id: warm-up-gradle-cache
-        uses: gradle/gradle-command-action@b3afdc78a7849557ab26e243ccf07548086da025 # v1.5.1
+        uses: gradle/gradle-command-action@ac2d340dc04d9e1113182899e983b5400c17cda1 # v3.5.0
         env:
           JAVA_HOME: ${{ steps.setup-java.outputs.path }}
         with:
@@ -143,11 +147,12 @@ jobs:
           dependencies-cache-key: |
             **/libs.versions.toml
           dependencies-cache-exact: false
-          gradle-executable: activity/gradlew
-          wrapper-directory: activity/gradle/wrapper
-          distributions-cache-enabled: true
+          gradle-executable: gradle
+          distributions-cache-enabled: false
       - name: "ktfmt"
+        if: ${{ steps.ktfmt-file-args.outputs.ktfmt-file-args != '' }}
         uses: gradle/gradle-command-action@b3afdc78a7849557ab26e243ccf07548086da025 # v1.5.1
+        uses: gradle/gradle-command-action@ac2d340dc04d9e1113182899e983b5400c17cda1 # v3.5.0
         env:
           JAVA_HOME: ${{ steps.setup-java.outputs.path }}
         with:
@@ -155,8 +160,7 @@ jobs:
           build-root-directory: activity
           configuration-cache-enabled: false
           dependencies-cache-enabled: false
-          gradle-executable: activity/gradlew
-          wrapper-directory: activity/gradle/wrapper
+          gradle-executable: gradle
           distributions-cache-enabled: false
 
   tests:
@@ -170,7 +174,7 @@ jobs:
 
       - name: "Setup JDK 11"
         id: setup-java
-        uses: actions/setup-java@b6e674f4b717d7b0ae3baee0fbe79f498905dfde # v1.4.4
+        uses: actions/setup-java@dded0888837ed1f317902acf8a20df0ad188d165 # v5.0.0
         with:
           java-version: "11"
 
