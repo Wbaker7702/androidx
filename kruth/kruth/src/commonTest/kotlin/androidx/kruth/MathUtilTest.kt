@@ -102,4 +102,21 @@ class MathUtilTest {
             .isFalse()
         assertThat(notEqualWithinTolerance(Double.NaN, Double.NaN, 0.01)).isFalse()
     }
+
+    @Test
+    fun longEquals() {
+        // exact equality with zero tolerance
+        assertThat(equalWithinTolerance(130L, 130L, 0L)).isTrue()
+
+        // within positive tolerance
+        assertThat(equalWithinTolerance(100L, 105L, 5L)).isTrue()
+        assertThat(equalWithinTolerance(100L, 106L, 5L)).isFalse()
+
+        // negative tolerance treated as absolute value
+        assertThat(equalWithinTolerance(100L, 103L, -3L)).isTrue()
+        assertThat(equalWithinTolerance(100L, 104L, -3L)).isFalse()
+
+        // extreme values trigger overflow-safe path and should be considered not within tolerance
+        assertThat(equalWithinTolerance(Long.MIN_VALUE, Long.MAX_VALUE, Long.MAX_VALUE)).isFalse()
+    }
 }
