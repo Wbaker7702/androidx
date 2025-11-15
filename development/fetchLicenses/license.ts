@@ -29,6 +29,27 @@ const ALLOWED_HOSTNAMES = [
   "raw.githubusercontent.com",
   // add more allowed domains as needed
 ];
+
+// Returns true if the given url string matches allowed host exactly, no subdomain/port/userinfo.
+function isStrictlyAllowedHost(urlStr: string): boolean {
+  try {
+    const url = new URL(urlStr);
+    // Hostname must match exactly, case-insensitive
+    const hostMatch = ALLOWED_HOSTNAMES.some(
+      allowed => url.hostname.toLowerCase() === allowed.toLowerCase()
+    );
+    // Disallow ports other than 80/443 (or any port)
+    const portAllowed = url.port === "" || url.port === "443" || url.port === "80";
+    // Disallow userinfo
+    const userinfoAllowed = (url.username === "" && url.password === "");
+    // Disallow subdomains
+    const foundIndex = ALLOWED_HOSTNAMES.findIndex(h => url.hostname.toLowerCase() === h.toLowerCase());
+    const noSubdomain = foundIndex !== -1;
+    return hostMatch && portAllowed && userinfoAllowed && noSubdomain;
+  } catch (e) {
+    return false;
+  }
+}
 // Import punycode for normalizing potential Unicode hostnames
 import * as punycode from 'punycode/';
 
@@ -149,15 +170,15 @@ async function handleLicenseRequest(url: string, enableLocalDebugging: boolean =
   if (!isValidProtocol(transformed)) {
     throw new Error('Invalid protocol in transformed URL');
   }
-  if (!isAllowedHost(transformed)) {
-    throw new Error('Transformed URL host not allowed.');
+  if (!isStrictlyAllowedHost(transformed)) {
+    throw new Error('Transformed URL host not strictly allowed.');
   }
-  // Defensive: Extract hostname again after transformation and validate strictly
-  const finalHostname = new URL(transformed).hostname.toLowerCase();
-  const allowed = ALLOWED_HOSTNAMES.some(h => h.toLowerCase() === finalHostname);
-  if (!allowed) {
-    throw new Error('Transformed URL host not in allowlist (final check).');
-  }
+  // Defensive: Already validated above, but keep for clarity
+  // Note: strict allowlist now enforces normalized host, no subdomains/ports/userinfo
+
+
+
+
   const browser = await puppeteer.launch({
     args: CHROME_LAUNCH_ARGS,
     devtools: enableLocalDebugging,
