@@ -301,7 +301,7 @@ public class SlideEdgeTest extends BaseTransitionTest {
         rule.runOnUiThread(() -> {
             int[] position = new int[2];
             mRoot.getLocationOnScreen(position);
-            position[0] += redSquare.getLeft() + redSquare.getTranslationX();
+            position[0] += redSquare.getLeft() + Math.round(redSquare.getTranslationX());
             position[1] += (int) (redSquare.getTop() + redSquare.getTranslationY());
             assertEquals(interruptedPosition[1], position[1]);
             assertTrue(position[0] <= interruptedPosition[0]);
