@@ -407,7 +407,7 @@ public class BitmapCompatTest {
         assertTrue(Math.abs(totalRed - expectedMeanValue) < Math.sqrt(expectedVariance));
         float variance = 0;
         for (int i = 0; i < numOut; i++) {
-            variance += Math.pow(Color.red(pixelsOut[i]) - totalRed, 2);
+            variance += (float) Math.pow(Color.red(pixelsOut[i]) - totalRed, 2);
         }
         variance /= numOut;
         assertTrue(variance < expectedVariance);
