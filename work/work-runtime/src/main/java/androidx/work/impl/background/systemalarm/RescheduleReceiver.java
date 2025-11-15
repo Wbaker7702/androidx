@@ -32,6 +32,10 @@ public class RescheduleReceiver extends BroadcastReceiver {
 
     @Override
     public void onReceive(Context context, Intent intent) {
+        if (intent == null || !Intent.ACTION_BOOT_COMPLETED.equals(intent.getAction())) {
+            Logger.get().debug(TAG, "Ignoring intent " + intent);
+            return;
+        }
         Logger.get().debug(TAG, "Received intent " + intent);
         try {
             WorkManagerImpl workManager = WorkManagerImpl.getInstance(context);
