@@ -30,6 +30,17 @@ const ALLOWED_HOSTNAMES = [
   // add more allowed domains as needed
 ];
 
+// Acceptable regex patterns for URLs (per host)
+const ALLOWED_PATH_PATTERNS: { [hostname: string]: RegExp[] } = {
+  "github.com": [
+    // Only license files by direct repo path, no traversal, no secrets
+    /^\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/(LICENSE|LICENSE\.md|LICENSE\.txt)$/i
+  ],
+  "raw.githubusercontent.com": [
+    /^\/[^\/]+\/[^\/]+\/[^\/]+\/(LICENSE|LICENSE\.md|LICENSE\.txt)$/i
+  ]
+};
+
 // Returns true if the given url string matches allowed host exactly, no subdomain/port/userinfo.
 function isStrictlyAllowedHost(urlStr: string): boolean {
   try {
@@ -170,11 +181,11 @@ async function handleLicenseRequest(url: string, enableLocalDebugging: boolean =
   if (!isValidProtocol(transformed)) {
     throw new Error('Invalid protocol in transformed URL');
   }
-  if (!isStrictlyAllowedHost(transformed)) {
-    throw new Error('Transformed URL host not strictly allowed.');
+  if (!isStrictlyAllowedUrl(transformed)) {
+    throw new Error('Transformed URL not strictly allowed.');
   }
   // Defensive: Already validated above, but keep for clarity
-  // Note: strict allowlist now enforces normalized host, no subdomains/ports/userinfo
+  // SSRF protection: validate entire URL structure
 
 
 
@@ -280,5 +291,57 @@ async function handleLicenseRequest(url: string, enableLocalDebugging: boolean =
     return accumulator;
   });
   await browser.close();
+
+
+/**
+ * SSRF defense: validate that the given URL is strictly allowed (protocol, hostname, port, path).
+ */
+function isStrictlyAllowedUrl(requestUrl: string): boolean {
+  let url: URL;
+  try {
+    url = new URL(requestUrl);
+  } catch (e) {
+    log(`Could not parse url: ${requestUrl}`);
+    return false;
+  }
+  // Hostname must be allowlisted
+  if (!ALLOWED_HOSTNAMES.includes(url.hostname)) {
+    log(`Disallowed hostname: ${url.hostname}`);
+    return false;
+  }
+  // Protocol must be https
+  if (url.protocol !== 'https:') {
+    log(`Disallowed protocol: ${url.protocol}`);
+    return false;
+  }
+  // No port (default only)
+  if (url.port && url.port !== '443') {
+    log(`Disallowed port: ${url.port}`);
+    return false;
+  }
+  // No userinfo
+  if (url.username || url.password) {
+    log("Disallowed userinfo in URL");
+    return false;
+  }
+  // Path must match approved pattern for this host
+  const patterns = ALLOWED_PATH_PATTERNS[url.hostname];
+  if (patterns) {
+    if (!patterns.some((pat) => pat.test(url.pathname))) {
+      log(`Disallowed path: ${url.pathname}`);
+      return false;
+    }
+  } else {
+    // No pattern defined for this host, reject
+    log(`No patterns for host ${url.hostname}`);
+    return false;
+  }
+  // Prevent path traversal (../), percent-encoded variants, double dots
+  if (/(\.\.|%2e%2e|%2E%2E)/i.test(url.pathname)) {
+    log(`Path traversal detected: ${url.pathname}`);
+    return false;
+  }
+  return true;
+}
   return content;
 }
