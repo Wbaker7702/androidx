@@ -173,7 +173,7 @@ public class MotionKeyPositionTest {
         motion.interpolate(res, 0.5f, 1000000 + (int) (0.5 * 100), cache);
         System.out.println("0.5 " + res);
         if (DEBUG) {
-            for (float p = 0; p <= 1; p += 0.01) {
+            for (float p = 0; p <= 1; p += 0.01f) {
                 motion.interpolate(res, p, 1000000 + (int) (p * 100), cache);
                 System.out.println(res + " ,     " + p);
             }
