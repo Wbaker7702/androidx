@@ -127,7 +127,7 @@ public class MotionKeyPositionTest {
         if (DEBUG) {
 
             String str = "";
-            for (float p = 0; p <= 1; p += 0.01) {
+            for (float p = 0; p <= 1; p += 0.01f) {
                 motion.interpolate(res, p, 1000000 + (int) (p * 100), cache);
                 str += res + "\n";
             }
