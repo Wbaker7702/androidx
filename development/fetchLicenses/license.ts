@@ -30,6 +30,18 @@ const ALLOWED_HOSTNAMES = [
   // add more allowed domains as needed
 ];
 
+// Map allowed hostnames to strict allowed path regex patterns (SSRF defense)
+// Only allow LICENSE files at top level of repositories (tighten pattern as needed)
+const ALLOWED_PATH_PATTERNS: { [hostname: string]: RegExp[] } = {
+  "github.com": [
+    /^\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/LICENSE(.md|\.txt|)?$/i, // e.g. /owner/repo/blob/branch/LICENSE
+  ],
+  "raw.githubusercontent.com": [
+    /^\/[^\/]+\/[^\/]+\/[^\/]+\/LICENSE(.md|\.txt|)?$/i, // e.g. /owner/repo/branch/LICENSE
+  ],
+  // add more patterns for allowed hosts as needed
+};
+
 // Acceptable regex patterns for URLs (per host)
 const ALLOWED_PATH_PATTERNS: { [hostname: string]: RegExp[] } = {
   "github.com": [
@@ -326,7 +338,7 @@ function isStrictlyAllowedUrl(requestUrl: string): boolean {
   }
   // Path must match approved pattern for this host
   const patterns = ALLOWED_PATH_PATTERNS[url.hostname];
-  if (patterns) {
+  if (patterns && patterns.length > 0) {
     if (!patterns.some((pat) => pat.test(url.pathname))) {
       log(`Disallowed path: ${url.pathname}`);
       return false;
