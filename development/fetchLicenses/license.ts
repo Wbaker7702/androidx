@@ -23,12 +23,12 @@ import { transformUrl } from './url-transforms';
 
 const CHROME_LAUNCH_ARGS = ['--enable-dom-distiller'];
 
-// Only allow requests to these hostnames (add more as required)
-const ALLOWED_HOSTNAMES = [
+// Only allow requests to these hostnames (IMMUTABLE allowlist: SSRF defense)
+const ALLOWED_HOSTNAMES = Object.freeze([
   "github.com",
   "raw.githubusercontent.com",
   // add more allowed domains as needed
-];
+] as const);
 
 /**
  * For each allowed host, define strict whitelisted path regexes.
