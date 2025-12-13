@@ -30,6 +30,25 @@ const ALLOWED_HOSTNAMES = [
   // add more allowed domains as needed
 ];
 
+/**
+ * For each allowed host, define strict whitelisted path regexes.
+ * Only allow known-named LICENSE files at the repo root or specific folder.
+ */
+const ALLOWED_PATH_PATTERNS: { [host: string]: RegExp[] } = {
+  "github.com": [
+    /^\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/LICENSE(\.[a-zA-Z0-9]+)?$/i,
+    /^\/[^\/]+\/[^\/]+\/blob\/[^\/]+\/COPYING(\.[a-zA-Z0-9]+)?$/i,
+  ],
+  "raw.githubusercontent.com": [
+    /^\/[^\/]+\/[^\/]+\/[^\/]+\/LICENSE(\.[a-zA-Z0-9]+)?$/i,
+    /^\/[^\/]+\/[^\/]+\/[^\/]+\/COPYING(\.[a-zA-Z0-9]+)?$/i,
+  ],
+  // Add additional domains with strict patterns as needed
+};
+
+Object.freeze(ALLOWED_HOSTNAMES);
+Object.freeze(ALLOWED_PATH_PATTERNS);
+
 // Map allowed hostnames to strict allowed path regex patterns (SSRF defense)
 // Only allow LICENSE files at top level of repositories (tighten pattern as needed)
 const ALLOWED_PATH_PATTERNS: { [hostname: string]: RegExp[] } = {
