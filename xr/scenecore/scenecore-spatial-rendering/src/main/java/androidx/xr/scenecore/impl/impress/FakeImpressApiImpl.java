@@ -69,6 +69,7 @@ public class FakeImpressApiImpl implements ImpressApi {
         Surface mSurface;
         boolean mUseSuperSampling;
         @StereoMode int mStereoMode;
+        @ContentSecurityLevel int mContentSecurityLevel;
         // This is a union of the CanvasShape parameters
         float mWidth;
         float mHeight;
@@ -87,6 +88,11 @@ public class FakeImpressApiImpl implements ImpressApi {
         @StereoMode
         public int getStereoMode() {
             return mStereoMode;
+        }
+
+        @ContentSecurityLevel
+        public int getContentSecurityLevel() {
+            return mContentSecurityLevel;
         }
 
         public float getWidth() {
@@ -435,7 +441,6 @@ public class FakeImpressApiImpl implements ImpressApi {
                 stereoMode, ContentSecurityLevel.NONE, /* useSuperSampling= */ false);
     }
 
-    // TODO - b/410899125: Set the content security level properly.
     @Override
     public @NonNull ImpressNode createStereoSurface(
             @StereoMode int stereoMode, @ContentSecurityLevel int contentSecurityLevel) {
@@ -452,6 +457,7 @@ public class FakeImpressApiImpl implements ImpressApi {
         data.mSurface = new TestSurface(data.mImpressNode.getHandle());
         data.mUseSuperSampling = useSuperSampling;
         data.mStereoMode = stereoMode;
+        data.mContentSecurityLevel = contentSecurityLevel;
         data.mCanvasShape = null;
         mStereoSurfaceEntities.put(data.mImpressNode, data);
         return data.mImpressNode;
