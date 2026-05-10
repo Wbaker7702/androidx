@@ -41,8 +41,7 @@ import javax.xml.parsers.DocumentBuilderFactory
 import kotlin.system.exitProcess
 
 if (args.isEmpty()) {
-    println("Expected space-delimited list of files. Consider parsing all baselines with:")
-    println("  ./<path-to-script> `find . -name lint-baseline.xml`")
+    printUsage()
     println("Also, consider updating baselines before running the script using:")
     println("  ./gradlew updateLintBaseline --continue")
     exitProcess(1)
@@ -54,15 +53,22 @@ if (args[0] == "test") {
     exitProcess(0)
 }
 
-val missingFiles = args.filter { arg -> !File(arg).exists() }
+val commandLineOptions = try {
+    parseCommandLineOptions(args.toList())
+} catch (e: IllegalArgumentException) {
+    println(e.message)
+    printUsage()
+    exitProcess(1)
+}
+
+val missingFiles = commandLineOptions.lintBaselinePaths.filter { arg -> !File(arg).exists() }
 if (missingFiles.isNotEmpty()) {
     println("Could not find files:\n  ${missingFiles.joinToString("\n  ")}")
     exitProcess(1)
 }
 
 val executionPath = File(".")
-// TODO: Consider adding argument "--output <output-file-path>"
-val csvOutputFile = File("output.csv")
+val csvOutputFile = commandLineOptions.outputFile
 val csvData = StringBuilder()
 val columnLabels = listOf(
     "Baseline",
@@ -80,7 +86,7 @@ if (!csvOutputFile.exists()) {
 }
 
 // For each file, emit one issue per line into the CSV.
-args.forEach { lintBaselinePath ->
+commandLineOptions.lintBaselinePaths.forEach { lintBaselinePath ->
     val lintBaselineFile = File(lintBaselinePath)
     println("Parsing ${lintBaselineFile.path}...")
 
@@ -104,9 +110,44 @@ args.forEach { lintBaselinePath ->
     }
 }
 
+csvOutputFile.parentFile?.mkdirs()
 csvOutputFile.appendText(csvData.toString())
 
-println("Wrote CSV output to ${csvOutputFile.path} for ${args.size} baselines")
+println(
+    "Wrote CSV output to ${csvOutputFile.path} for " +
+        "${commandLineOptions.lintBaselinePaths.size} baselines"
+)
+
+fun printUsage() {
+    println("Expected space-delimited list of files. Consider parsing all baselines with:")
+    println("  ./<path-to-script> --output lint-baselines.csv `find . -name lint-baseline.xml`")
+    println("Options:")
+    println("  --output <output-file-path>   Write CSV rows to the supplied file instead of output.csv")
+}
+
+fun parseCommandLineOptions(args: List<String>): CommandLineOptions {
+    var outputFile = File("output.csv")
+    val lintBaselinePaths = mutableListOf<String>()
+    var i = 0
+    while (i < args.size) {
+        val arg = args[i]
+        if (arg == "--output") {
+            require(i + 1 < args.size) { "Expected file path after --output" }
+            outputFile = File(args[i + 1])
+            i += 2
+        } else if (arg.startsWith("--output=")) {
+            val path = arg.substringAfter("--output=")
+            require(path.isNotEmpty()) { "Expected file path after --output=" }
+            outputFile = File(path)
+            i++
+        } else {
+            lintBaselinePaths.add(arg)
+            i++
+        }
+    }
+    require(lintBaselinePaths.isNotEmpty()) { "Expected at least one lint baseline file" }
+    return CommandLineOptions(outputFile, lintBaselinePaths)
+}
 
 object LintBaselineParser {
     fun parse(lintBaselineFile: File): List<LintIssues> {
@@ -191,9 +232,16 @@ data class LintLocation(
     val column: Int,
 )
 
+data class CommandLineOptions(
+    val outputFile: File,
+    val lintBaselinePaths: List<String>,
+)
+
 fun runTests() {
     `Baseline with one issue parses contents correctly`()
     `Empty baseline has no issues`()
+    `Output option accepts separate path argument`()
+    `Output option accepts equals path argument`()
 }
 
 @Test
@@ -248,4 +296,21 @@ fun `Empty baseline has no issues`() {
 
     var issues = listIssues[0].issues
     assertEquals(0, issues.size)
+}
+
+@Test
+fun `Output option accepts separate path argument`() {
+    val options =
+        parseCommandLineOptions(listOf("--output", "lint-baselines.csv", "lint-baseline.xml"))
+
+    assertEquals(File("lint-baselines.csv"), options.outputFile)
+    assertEquals(listOf("lint-baseline.xml"), options.lintBaselinePaths)
+}
+
+@Test
+fun `Output option accepts equals path argument`() {
+    val options = parseCommandLineOptions(listOf("lint-baseline.xml", "--output=reports/lint.csv"))
+
+    assertEquals(File("reports/lint.csv"), options.outputFile)
+    assertEquals(listOf("lint-baseline.xml"), options.lintBaselinePaths)
 }
