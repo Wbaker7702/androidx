@@ -18,10 +18,12 @@ from build_log_simplifier import collapse_consecutive_blank_lines
 from build_log_simplifier import collapse_tasks_having_no_output
 from build_log_simplifier import extract_task_names
 from build_log_simplifier import remove_unmatched_exemptions
+from build_log_simplifier import summarize_output_by_section
 from build_log_simplifier import suggest_missing_exemptions
 from build_log_simplifier import normalize_paths
 from build_log_simplifier import regexes_matcher
 from build_log_simplifier import remove_control_characters
+import collections
 import re
 
 def fail(message):
@@ -194,6 +196,35 @@ def test_suggest_missing_exemptions():
     expect_config4 = config4
     validate_suggested_exemptions(lines4, config4, expect_config4)
 
+def test_summarize_output_by_section():
+    print("test_summarize_output_by_section")
+    lines = [
+        "warning before task",
+        "",
+        "> Task :compileDebugKotlin",
+        "first compiler warning",
+        "",
+        "second compiler warning",
+        "> Task :lintDebug",
+        "lint warning",
+        "> Configure project :sample",
+        "configuration warning",
+        "> Task :empty",
+    ]
+    expected = collections.OrderedDict([
+        ("<no task>", 1),
+        (":compileDebugKotlin", 2),
+        (":lintDebug", 1),
+        (":sample", 1),
+    ])
+    actual = summarize_output_by_section(lines)
+    if actual != expected:
+        fail("summarize_output_by_section returned incorrect response.\n" +
+            "Input   : " + str(lines) + "\n" +
+            "Output  : " + str(actual) + "\n" +
+            "Expected: " + str(expected)
+        )
+
 def test_collapse_tasks_having_no_output():
     print("test_collapse_tasks_having_no_output")
     lines = [
@@ -284,6 +315,7 @@ def main():
     test_collapse_tasks_having_no_output()
     test_detect_task_names()
     test_suggest_missing_exemptions()
+    test_summarize_output_by_section()
     test_normalize_paths()
     test_regexes_matcher_get_matching_regexes()
     test_regexes_matcher_index_first_matching_regex()

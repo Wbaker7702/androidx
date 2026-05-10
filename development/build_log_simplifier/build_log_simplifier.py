@@ -28,6 +28,7 @@ parser = argparse.ArgumentParser(
 parser.add_argument("--validate", action="store_true", help="Validate that no unrecognized messages exist in the given log")
 parser.add_argument("--update", action="store_true", help="Update our list of recognized messages to include all messages from the given log")
 parser.add_argument("--gc", action="store_true", help="When generating a new exemptions file, exclude any exemptions that were not found in the given log. Only relevant with --update or --validate")
+parser.add_argument("--task-summary", action="store_true", help="Print a count of remaining output lines grouped by Gradle task or configure-project section")
 parser.add_argument("log_path", help="Filepath of log(s) to process", nargs="+")
 
 # a regexes_matcher can quickly identify which of a set of regexes matches a given text
@@ -222,6 +223,44 @@ def extract_task_names(lines):
         if name is not None and name not in names:
             names.append(name)
     return names
+
+def extract_section_name(line):
+    task_name = extract_task_name(line)
+    if task_name is not None:
+        return task_name
+    configure_prefix = "> Configure project "
+    if line.startswith(configure_prefix):
+        return line[len(configure_prefix):].strip()
+    return None
+
+def summarize_output_by_section(lines):
+    counts_by_section = collections.OrderedDict()
+    current_section = None
+    for line in lines:
+        section_name = extract_section_name(line)
+        if section_name is not None:
+            current_section = section_name
+            if current_section not in counts_by_section:
+                counts_by_section[current_section] = 0
+            continue
+        if line.strip() == "":
+            continue
+        if current_section is None:
+            current_section = "<no task>"
+            counts_by_section[current_section] = 0
+        counts_by_section[current_section] += 1
+    return collections.OrderedDict(
+        (section, count) for section, count in counts_by_section.items() if count > 0
+    )
+
+def print_task_summary(lines):
+    counts_by_section = summarize_output_by_section(lines)
+    if len(counts_by_section) == 0:
+        print("No remaining task output.")
+        return
+    print("Remaining output by task:")
+    for section, count in counts_by_section.items():
+        print("  " + section + ": " + str(count) + " line" + ("" if count == 1 else "s"))
 
 # If a task has no output (or only blank output), this function removes the task (and its output)
 # For example, turns this:
@@ -567,6 +606,10 @@ def main():
             exit(1)
     else:
         interesting_lines = shorten_uninteresting_stack_frames(interesting_lines)
+        if arguments.task_summary:
+            print_task_summary(interesting_lines)
+            if len(interesting_lines) != 0:
+                print("")
         print("".join(interesting_lines))
 
 if __name__ == "__main__":
